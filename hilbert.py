@@ -176,17 +176,64 @@ class Utils:
         self.T4 = np.dot(Vmod, PhaseMat).T 
     
     
+    @staticmethod
+    def getHilb(Nphi, Ne, sector, fol='/tigress/ak20/QH/hilbert/'):
+        """
+        get the entire Hilbert space in a particular sector
+        
+        inputs:
+        -------
+        Nphi   : int, number of orbitals,
+        Ne     : int, number of electrons
+        sector : int, momentuum sector (modulo Nphi)
+        fol    : str, location of directory
+        
+        outputs:
+        --------
+        hilb   : np.array of dtype int8, with Ne columns, and NH rows 
+                 where NH is the size of the Hilbert space
+        """
+        
+        hilb = np.zeros((0, Ne), dtype='int8')
+        hilbLen = np.zeros(Ne+1, dtype='int8')
+        
+        for s in range(Ne+1):
+            try:
+                fil = np.load(fol+'Nphi{0:d}_Ne{1:d}_sector{2:d}.npy'.format(
+                              Nphi, Ne, sector + s*Nphi))
+            except:
+                pass
+            hilb = np.r_[ret, fil]
+            hilbLen[s] = len(fil)
+            
+        return hilb, hilbLen
 
 class Hilbert:
+    """
+    bare-bones jit class with matvec
+    """
     
-    def __init__(self, Nphi, Ne):
+    def __init__(self, Nphi, Ne, sector, hilb, hilbLen):
+        """
+        Nphi   : int, number of orbitals
+        Ne     : int, number of electrons
+        sector : int, momentum sector
+        hilb   : np.array, NH x Ne of dtype int8, has the entire Hilbert space 
+        hilbLen: size of Hilbert space in each subsector
+        """
+        
         self.Nphi = Nphi
         self.Ne = Ne
+        self.sector = sector
+        self.hilb = hilb
+        self.hilbLen = hilbLen
+        
         
     def getMatVec(self, v):
-        # hilbs must be a list of arrays, corresponding to all the sub-sectors in the
-        # Hilbert space
-        NH = len(hilb) # size of Hilbert space
+        """
+        Hamiltonian operator
+        """
+        NH = len(self.hilb) # size of Hilbert space
 
         vOut = np.zeros(NH)
 
@@ -194,15 +241,15 @@ class Hilbert:
             eOcc = hilb[cHilb] # occupied electrons
 
             #find pairs
-            for p1 in range(Ne):
-                for p2 in range(p1+1, Ne):
+            for p1 in range(self.Ne):
+                for p2 in range(p1+1, self.Ne):
                     c1 = eOcc[p1] # orbital of first occupied electron
                     c2 = eOcc[p2] # orbital of second occupied electron
 
-                        # find new pairs
-                    for cx in range(1, Nphi):
-                        c1new = (c1+cx)%Nphi
-                        c2new = (c2-cx)%Nphi
+                    # find new pairs
+                    for cx in range(1, self.Nphi):
+                        c1new = (c1+cx)%self.Nphi
+                        c2new = (c2-cx)%self.Nphi
                         if c1new >= c2new:
                             continue
                         if c1new in eOcc or c2new in eOcc:
@@ -215,7 +262,7 @@ class Hilbert:
                             eOccNew = np.zeros(Ne, dtype='int8') # array of length Ne
                             cNeOld = 0
                             state = 0
-                            for cNe in range(Ne):
+                            for cNe in range(self.Ne):
                                 if cNeOld == p1 or cNeOld == p2:
                                     cNeOld += 1
 
@@ -243,7 +290,7 @@ class Hilbert:
 
 
                             # find index of eOccNew in hilb, again binary search
-                            indNew = indexOf(eOccNew, hilb)
+                            indNew = self.indexOf(eOccNew, self.hilb)
 
 
                             matrixel = 0
@@ -252,142 +299,57 @@ class Hilbert:
                             # update vOut
                             vOut[indNew] += matrixel
         return vOut
-
-class Torus(object):
-    """
-    Encapsulates info about the geometry of the torus
-    """
-
-    def __init__(self, Nphi, aspect_ratio = 1., theta_x = 0., theta_y = 0., params={}):
-        self.Nphi = Nphi
-        self.aspect_ratio = aspect_ratio
-        self.Lx = np.sqrt(2*np.pi*Nphi/aspect_ratio)
-        self.Ly = np.sqrt(2*np.pi*Nphi*aspect_ratio)
-        self.theta_x = theta_x
-        self.theta_y = theta_y
-        
-    def get_karr(self, mmax=None):
-        """
-        inputs:
-        --------
-        mmax     : int, maximum Fourier harmonic
-        
-        outputs:
-        --------
-        np.array : one dimensional array 
-                   [-2 \pi M / Lx, ..., -2 \pi / Lx, 0, 2 \pi / Lx, ..., 2 \pi M / Lx]
-        np.array : one dimensional array 
-                   [-2 \pi M / Ly, ..., -2 \pi / Ly, 0, 2 \pi / Ly, ..., 2 \pi M / Ly]
-        int      : M
-        """
-        if mmax is None:
-            mmax = 3*np.max(self.Lx, self.Ly)
-        ms = np.r_[-mmax:mmax+1]
-        return ((2*np.pi/self.Lx) * ms,
-                (2*np.pi/self.Ly) * ms, 
-                mmax)
-        
-        
-class Potential:
-    """
-    Encapsulates all useful information about a potential.
-    """
-    def __init__(self):
-        self.V1 = None
-        self.V2 = None # two particle
     
-    def makeFF(self, kx_arr, ky_arr, alpha=1.0, n=0, **kwargs):
-        """
-        make the single particle form factor
-        In the n = 0 LLL,
-        FF(kx, ky) = exp( -(l_B^2/4) (k_x^2 + k_y^2) ) 
-                   * exp(i/2 k_x k_y)
-        
-        inputs:
-        -------
-        kx_arr: array of kx values
-        ky_arr: array of ky values
-        alpha : float, mass anisotropy
-        n     : int, LL index
-        
-        
-        returns:
-        --------
-        np.ndarray: Form factor
-        """
-        
-        if n == 0:
-            absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * kys**2 / alpha))
-            phaseFF = np.exp(-0.5j * np.outer(kx_arr, ky_arr))
-        
-        return absFF * phaseFF
     
-    def VFourier(k, n=1, x=np.inf, l=1000, **kwargs):
+    def indexOf(self, state, l=0, r=-1):
         """
-        obtain V(k)
-
-        inputs:
-        -------
-        k     : np.ndarray, absolute value of momentum
-        n     : float, power law fall-off
-        x     : float, Gaussian envelope length scale
-        l     : int, number of divisions in integration quadrature
-
-        outputs:
-        --------
-        float : V(k) at continuum k 
+        return the index of a many-body state among an array
+        of such states via a binary search
+        
         """
+        
+        NH = len(self.hilb)
 
-        # if only Gaussian
-        if n == 0:
-            Vk = 2 * np.pi * x**2 * np.exp(-x**2 * k**2)
-            Vk[np.abs(k) < 1e-8] = 0
-            return Vk
-        else:
-            # if Coulomb
-            if n == 1 and x is np.inf:
-                Vk = np.zeros_like(k_arr)
-                Vk[np.abs(k) > 1e-8] = 2*np.pi / k[np.abs(k) > 1e-8]
+
+        # assert np.sum(state) == np.sum(allStatesSector[0])
+
+        # l = 0
+        if r == -1:
+            r = N
+
+        #binary search
+        while r-l > 1:
+            mid = (l+r)//2
+            if self.isGreater(allStatesSector[mid], state):
+                r = mid
             else:
-                def integrand(r, k1):
-                    return r * scipy.special.jv(0, k1*r) * 1/r**n * np.exp(-0.5 * (r/x)**2)
+                l = mid
 
-                ret = np.zeros_like(k_arr)
-                Nx, Ny  = ret.shape
+        return l
 
-                for i in range(Nx):
-                    for j in range(Ny):
-                        val1, _ = scipy.integrate.quad(integrand, 0, 1, args=(k_arr[i, j]), limit=l)
-                        val2, _ = scipy.integrate.quad(integrand, 1, np.inf, args=(k_arr[i, j]), limit=l)
-                        ret[i, j] = 2 * np.pi * (val1 + val2)
-
-                return ret
-    
-    def setV2(self, torus, vParams={}, hamParams={}):
+    def isGreater(s1, s2):
         """
-        set the V2 attribute (interaction)
-        self.V2 is a two dimensional np.array, with the 
-        effective potential at q = (k_x, k_y),
-        where k_x and k_y are given by the torus 
+        return True if s1 comes 'lexicographically' after s2
+        s1 and s2 must be of same length, and each must be sorted in
+        ascending order
+        comparison is done starting from the 'highest occupied orbital'
+        e.g. [0, 2, 4, 8] comes after [1, 3, 5, 7]
         
         inputs:
         -------
-        torus     : Torus object
-        vParams   : dict with keys n, x, l
-        hamParams : dict with keys alpha, n, Nphi
+        s1   : numpy array of ints
+        s2   : numpy array of ints
         
         outputs:
         --------
-        None
+        bool : True or false
         """
-        
-        kx, ky, _ = torus.get_karr()
-        k_abs = np.sqrt(kx[:, np.newaxis]**2 + ky**2)
-        
-        Vk = self.VFourier(k_abs, **vParams)
-        FF = self.makeFF(kx_arr, ky_arr, **hamParams)
-        
-        self.V2 = Vk * FF * FF / hamParams['Nphi']
-        
-        
-    
+        assert len(s1) == len(s2)
+        N = len(s1)
+        arr = range(N)
+        for c in arr:
+            if s1[N-c-1] > s2[N-c-1]:
+                return True
+            elif s1[N-c-1] < s2[N-c-1]:
+                return False
+        return False
