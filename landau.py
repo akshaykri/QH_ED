@@ -41,7 +41,7 @@ class Torus(object):
         int      : M
         """
         if mmax is None:
-            mmax = 3*np.max(self.Lx, self.Ly)
+            mmax = int(round(3*np.max(self.Lx, self.Ly)))
         ms = np.r_[-mmax:mmax+1]
         return ((2*np.pi/self.Lx) * ms,
                 (2*np.pi/self.Ly) * ms, 
