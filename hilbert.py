@@ -58,15 +58,15 @@ class Hilbert:
                             # and that they are both not in eOcc
 
                             # populate eOccNew
-                            eOccNew = np.zeros(self.Ne, dtype=numba.int8) # array of length Ne
+                            eOccNew = np.zeros(self.Ne, dtype='int8')#numba.int8) # array of length Ne
                             cNeOld = 0
                             state = 0
                             for cNe in range(self.Ne):
-                                if cNeOld == p1 or cNeOld == p2:
+                                while cNeOld == p1 or cNeOld == p2:
                                     cNeOld += 1
 
                                 if state == 0:
-                                    if eOcc[cNeOld] < c1new:
+                                    if cNeOld < self.Ne and eOcc[cNeOld] < c1new:
                                         eOccNew[cNe] = eOcc[cNeOld]
                                         cNeOld += 1
                                     else:
@@ -75,7 +75,7 @@ class Hilbert:
                                         state = 1
 
                                 elif state == 1:
-                                    if eOcc[cNeOld] < c2new:
+                                    if cNeOld < self.Ne and eOcc[cNeOld] < c2new:
                                         eOccNew[cNe] = eOcc[cNeOld]
                                         cNeOld += 1
                                     else:
@@ -90,7 +90,9 @@ class Hilbert:
 
                             # find index of eOccNew in hilb, again binary search
                             indNew = self.indexOf(eOccNew)
-
+                            
+#                             print(cHilb, eOcc)
+#                             print(indNew, eOccNew)
                             # (-1)^n = 1 - 2*(n%2)
                             #the four terms
                             matrixel = ((1 - 2*((p1new+p2new+p1+p2 + 1)%2)) * 
@@ -99,9 +101,11 @@ class Hilbert:
                                        ((1 - 2*((p1new+p2new+p1+p2)%2)) * 
                                         (self.T4[(c1new-c2new)%self.Nphi, (c2-c2new)%self.Nphi] + \
                                          self.T4[(c2new-c1new)%self.Nphi, (c1-c1new)%self.Nphi]))
+#                             print(matrixel)
+#                             print("\n")
                             
                             # update vOut
-                            vOut[indNew] += matrixel
+                            vOut[indNew] += 0.5 * matrixel * v[cHilb]
         return vOut
     
     
@@ -125,7 +129,7 @@ class Hilbert:
         #binary search
         while r-l > 1:
             mid = (l+r)//2
-            if self.isGreater(allStatesSector[mid], state):
+            if self.isGreater(self.hilb[mid], state):
                 r = mid
             else:
                 l = mid

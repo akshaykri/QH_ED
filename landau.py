@@ -41,7 +41,7 @@ class Torus(object):
         int      : M
         """
         if mmax is None:
-            mmax = int(round(3*np.max(self.Lx, self.Ly)))
+            mmax = int(np.round(3*np.maximum(self.Lx, self.Ly)))
         ms = np.r_[-mmax:mmax+1]
         return ((2*np.pi/self.Lx) * ms,
                 (2*np.pi/self.Ly) * ms, 
@@ -77,12 +77,12 @@ class Potential:
         """
         
         if n == 0:
-            absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * kys**2 / alpha))
+            absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha))
             phaseFF = np.exp(-0.5j * np.outer(kx_arr, ky_arr))
         
         return absFF * phaseFF
     
-    def VFourier(k, n=1, x=np.inf, l=1000, **kwargs):
+    def VFourier(self, k, n=1, x=np.inf, l=1000, **kwargs):
         """
         obtain V(k)
 
@@ -106,19 +106,20 @@ class Potential:
         else:
             # if Coulomb
             if n == 1 and x is np.inf:
-                Vk = np.zeros_like(k_arr)
+                Vk = np.zeros_like(k)
                 Vk[np.abs(k) > 1e-8] = 2*np.pi / k[np.abs(k) > 1e-8]
+                return Vk
             else:
                 def integrand(r, k1):
                     return r * scipy.special.jv(0, k1*r) * 1/r**n * np.exp(-0.5 * (r/x)**2)
 
-                ret = np.zeros_like(k_arr)
+                ret = np.zeros_like(k)
                 Nx, Ny  = ret.shape
 
                 for i in range(Nx):
                     for j in range(Ny):
-                        val1, _ = scipy.integrate.quad(integrand, 0, 1, args=(k_arr[i, j]), limit=l)
-                        val2, _ = scipy.integrate.quad(integrand, 1, np.inf, args=(k_arr[i, j]), limit=l)
+                        val1, _ = scipy.integrate.quad(integrand, 0, 1, args=(k[i, j]), limit=l)
+                        val2, _ = scipy.integrate.quad(integrand, 1, np.inf, args=(k[i, j]), limit=l)
                         ret[i, j] = 2 * np.pi * (val1 + val2)
 
                 return ret
@@ -145,7 +146,7 @@ class Potential:
         k_abs = np.sqrt(kx[:, np.newaxis]**2 + ky**2)
         
         Vk = self.VFourier(k_abs, **vParams)
-        FF = self.makeFF(kx_arr, ky_arr, **hamParams)
+        FF = self.makeFF(kx, ky, **hamParams)
         
         self.V2 = Vk * FF * FF / (2 * np.pi * hamParams['Nphi'])
         
