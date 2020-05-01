@@ -1,20 +1,10 @@
 import numpy as np
 from scipy import sparse as ssp
 import scipy.special
-import numba
 import time
 import os
 import pdb
 
-spec = [('Nphi', numba.int64),
-        ('Ne', numba.int64),
-        ('sector', numba.int64),
-        ('NH', numba.int64),
-        ('hilb', numba.int8[:,:]),
-        ('hilbLen', numba.int64[:]),
-        ('T4', numba.float64[:,:])]
-
-@numba.jitclass(spec)
 class Hilbert:
     """
     bare-bones jit class with matvec
@@ -68,27 +58,16 @@ class Hilbert:
                         if c1new >= c2new:
                             continue
                             
-#                         if c1new in eOcc or c2new in eOcc:
-#                             continue
-
-                        ####################
-                        # numba does not recognize contains (the 'in' keyword)
-                        searchIn = False
-                        for eOrb in eOcc:
-                            if c1new == eOrb or c2new == eOrb:
-                                searchIn = True
-                                break
-                        if searchIn:
+                        if c1new in eOcc or c2new in eOcc:
                             continue
-                        ####################
                         
                         else:
                             # at this point, we are sure that c2new > c1new,
                             # and that they are both not in eOcc
 
                             # populate eOccNew
-#                             eOccNew = np.zeros(self.Ne, dtype='int8') # array of length Ne
-                            eOccNew = np.zeros(self.Ne, dtype=numba.int8) # array of length Ne
+                            eOccNew = np.zeros(self.Ne, dtype='int8') # array of length Ne
+#                             eOccNew = np.zeros(self.Ne, dtype=numba.int8) # array of length Ne
                             cNeOld = 0
                             state = 0
                             for cNe in range(self.Ne):
