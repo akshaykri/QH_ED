@@ -12,7 +12,8 @@ spec = [('Nphi', numba.int64),
         ('NH', numba.int64),
         ('hilb', numba.int8[:,:]),
         ('hilbLen', numba.int64[:]),
-        ('T4', numba.float64[:,:])]
+        ('T4', numba.float64[:,:]),
+        ('dictx', numba.types.DictType(numba.int64, numba.int64))]
 
 @numba.jitclass(spec)
 class Hilbert:
@@ -35,6 +36,7 @@ class Hilbert:
         self.sector = sector
         self.hilb = hilb
         self.hilbLen = hilbLen
+        self.dictx = self.getDict()
         self.NH = len(self.hilb) # size of Hilbert space
         self.T4 = T4 
         
@@ -57,10 +59,8 @@ class Hilbert:
     
                     # diagonal terms
                     diagel += -self.T4[(c1-c2)%self.Nphi, (c1-c2)%self.Nphi] + \
-                              -self.T4[(c2-c1)%self.Nphi, (c2-c1)%self.Nphi] + \
-                               self.T4[(c1-c2)%self.Nphi, 0] + \
                                self.T4[(c2-c1)%self.Nphi, 0]
-                    
+                                                   
                     # find new pairs
                     for cx in range(1, self.Nphi):
                         c1new = (c1+cx)%self.Nphi
@@ -119,26 +119,34 @@ class Hilbert:
 
 
                             # find index of eOccNew in hilb, again binary search
-                            indNew = self.indexOf(eOccNew)
+                            indNew = self.dictx[np.sum(2**eOccNew)] # self.indexOf(eOccNew)
                             
-#                             print(cHilb, eOcc)
-#                             print(indNew, eOccNew)
                             # (-1)^n = 1 - 2*(n%2)
                             #the four terms
                             matrixel = ((1 - 2*((p1new+p2new+p1+p2 + 1)%2)) * 
-                                        (self.T4[(c1new-c2new)%self.Nphi, (c1-c2new)%self.Nphi] + \
-                                         self.T4[(c2new-c1new)%self.Nphi, (c2-c1new)%self.Nphi])) + \
+                                         self.T4[(c2new-c1new)%self.Nphi, (c2-c1new)%self.Nphi]) + \
                                        ((1 - 2*((p1new+p2new+p1+p2)%2)) * 
-                                        (self.T4[(c1new-c2new)%self.Nphi, (c2-c2new)%self.Nphi] + \
-                                         self.T4[(c2new-c1new)%self.Nphi, (c1-c1new)%self.Nphi]))
-#                             print(matrixel)
-#                             print("\n")
+                                         self.T4[(c2new-c1new)%self.Nphi, (c1-c1new)%self.Nphi])
                             
                             # update vOut
-                            vOut[indNew] += 0.5 * matrixel * v[cHilb]
-            vOut[cHilb] += 0.5 * diagel * v[cHilb]
+                            vOut[indNew] += matrixel * v[cHilb]
+            vOut[cHilb] += diagel * v[cHilb]
         return vOut
     
+    def getDict(self):
+        """
+        get a hash table mapping keys (state binary string) to indices
+        """
+        keys = np.sum(2**self.hilb, axis=1)
+        d = numba.typed.Dict.empty(
+            key_type=numba.int64,
+            value_type=numba.int64,
+        )
+
+        for i in range(keys.size):
+            d[keys[i]] = i
+    
+        return d
     
     def indexOf(self, state):#, l=0, r=-1):
         """
