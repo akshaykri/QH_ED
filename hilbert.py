@@ -8,7 +8,6 @@ import pdb
 
 spec = [('Nphi', numba.int64),
         ('Ne', numba.int64),
-        ('sector', numba.int64),
         ('NH', numba.int64),
         ('hilb', numba.int8[:,:]),
         ('hilbLen', numba.int64[:]),
@@ -21,11 +20,10 @@ class Hilbert:
     bare-bones jit class with matvec
     """
     
-    def __init__(self, Nphi, Ne, sector, hilb, hilbLen, T4):
+    def __init__(self, Nphi, Ne, hilb, hilbLen, T4):
         """
         Nphi   : int, number of orbitals
         Ne     : int, number of electrons
-        sector : int, momentum sector
         hilb   : np.array, NH x Ne of dtype int8, has the entire Hilbert space 
         hilbLen: np.array, size of Hilbert space in each subsector
         T4     : np.array, tensor of interaction elements V_{n1 n2 n3 n4} = V_{n1 0 n3 n1-n3}
@@ -33,7 +31,6 @@ class Hilbert:
         
         self.Nphi = Nphi
         self.Ne = Ne
-        self.sector = sector
         self.hilb = hilb
         self.hilbLen = hilbLen
         self.dictx = self.getDict()

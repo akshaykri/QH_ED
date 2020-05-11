@@ -62,6 +62,9 @@ class Potential:
         In the n = 0 LLL,
         FF(kx, ky) = exp( -(l_B^2/4) (k_x^2 + k_y^2) ) 
                    * exp(i/2 k_x k_y)
+        In higher LL's, use the Laguerre polynomial
+        (cf. Jainendra Jain, composite Fermions, Eq. 3.205, 
+         and Kun Yang, PRB 88 241105(R), 2013, Eq. 8)
         
         inputs:
         -------
@@ -70,15 +73,20 @@ class Potential:
         alpha : float, mass anisotropy
         n     : int, LL index
         
-        
         returns:
         --------
         np.ndarray: Form factor
         """
         
-        if n == 0:
-            absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha))
-            phaseFF = np.exp(-0.5j * np.outer(kx_arr, ky_arr))
+#         if n == 0:
+#             absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha))
+            
+#         else:
+        absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha)) * \
+                scipy.special.eval_laguerre(n, 0.5 * (alpha * kx_arr[:, np.newaxis]**2 + 
+                                                      ky_arr**2 / alpha))
+            
+        phaseFF = np.exp(-0.5j * np.outer(kx_arr, ky_arr))
         
         return absFF * phaseFF
     
