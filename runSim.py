@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as ssp
 from scipy.sparse.linalg import eigsh
 from scipy.sparse.linalg import LinearOperator
 import sys
@@ -11,16 +12,14 @@ if __name__ == "__main__":
     
     ind = int(sys.argv[1])
     LL = int(sys.argv[2]) 
-    fol = sys.argv[3]
+    Ne = int(sys.argv[3])
+    fol = sys.argv[4]
     
     alp_arr = np.r_[1.0:4.01:0.1] # 31
     asp_arr = np.array([0, 0.25, 0.5]) # 3
-    Ne_arr = np.array([6, 7, 8, 9, 10]) # 5
-    # 0 - 464
-    
-    
-    
-    Ne = Ne_arr[ind // 93]
+#     Ne_arr = np.array([6, 7, 8, 9, 10]) # 5
+    # 0 - 92
+
     Nphi = 3*Ne
     ar_factor = asp_arr[(ind // 31)%3]
     alpha = alp_arr[ind % 31]
@@ -38,9 +37,21 @@ if __name__ == "__main__":
     for sector in range(Ne):
     
         hilb0, hilbLen0 = utils.Utils.getHilb(Nphi, Ne, sector)
-        hilbert0 = hilbert.Hilbert(Nphi, Ne, sector, hilb0, hilbLen0, T4)
-        M0 = LinearOperator((len(hilb0), len(hilb0)), matvec=hilbert0.getMatVec)
-        E0, V0 = eigsh(M0, k=6, which='SA')
+        dictx = hilbert.getDict(hilb0)
+        
+        NH = len(hilb0)
+        dij = hilbert.getMat(Nphi, Ne, NH, hilb0, hilbLen0, T4, dictx)
+        HMat = ssp.coo_matrix((dij[0, :], 
+                              (dij[1, :], dij[2, :])),
+                              shape=(sum(hilbLen0), sum(hilbLen0)))
+        HMat = HMat.tocsr()
+        E0, V0 = eigsh(HMat, k=6, which='SA')
+        
+        
+        
+#         hilbert0 = hilbert.Hilbert(Nphi, Ne, sector, hilb0, hilbLen0, T4)
+#         M0 = LinearOperator((len(hilb0), len(hilb0)), matvec=hilbert0.getMatVec)
+#         E0, V0 = eigsh(M0, k=6, which='SA')
 
         fil = 'Nphi{0:d}_Ne{1:d}_sector{2:d}_alpha{3:d}'.format(
                Nphi, Ne, sector, int(round(10*alpha)))
