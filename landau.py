@@ -78,10 +78,6 @@ class Potential:
         np.ndarray: Form factor
         """
         
-#         if n == 0:
-#             absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha))
-            
-#         else:
         absFF = np.outer(np.exp(-0.25 * alpha * kx_arr**2), np.exp(-0.25 * ky_arr**2 / alpha)) * \
                 scipy.special.eval_laguerre(n, 0.5 * (alpha * kx_arr[:, np.newaxis]**2 + 
                                                       ky_arr**2 / alpha))

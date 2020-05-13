@@ -53,14 +53,14 @@ class Hilbert:
         
         vOut = np.zeros(self.NH)
 
-        for cHilb in range(self.NH):
+        for cHilb in np.arange(self.NH):
             eOcc = self.hilb[cHilb] # occupied electrons
             
             diagel = 0.0
             
             #find pairs
-            for p1 in numba.prange(self.Ne):
-                for p2 in numba.prange(p1+1, self.Ne):
+            for p1 in np.arange(self.Ne):
+                for p2 in np.arange(p1+1, self.Ne):
                     c1 = eOcc[p1] # orbital of first occupied electron
                     c2 = eOcc[p2] # orbital of second occupied electron
     
@@ -69,7 +69,7 @@ class Hilbert:
                                self.T4[(c2-c1)%self.Nphi, 0]
                                                    
                     # find new pairs
-                    for cx in range(1, self.Nphi):
+                    for cx in np.arange(1, self.Nphi):
                         c1new = (c1+cx)%self.Nphi
                         c2new = (c2-cx)%self.Nphi
                         if c1new >= c2new:
@@ -136,7 +136,7 @@ class Hilbert:
                                          self.T4[(c2new-c1new)%self.Nphi, (c1-c1new)%self.Nphi])
                             
                             # update vOut
-                            vOut[indNew] += matrixel * v[cHilb]
+                            vOut[cHilb] += matrixel * v[indNew]
             vOut[cHilb] += diagel * v[cHilb]
         return vOut
     
@@ -159,14 +159,14 @@ class Hilbert:
         dij = np.zeros((3, Nterms))
         cterm = 0
 
-        for cHilb in range(self.NH):
+        for cHilb in np.arange(self.NH):
             eOcc = self.hilb[cHilb] # occupied electrons
             
             diagel = 0.0
             
             #find pairs
-            for p1 in numba.prange(self.Ne):
-                for p2 in numba.prange(p1+1, self.Ne):
+            for p1 in np.arange(self.Ne):
+                for p2 in np.arange(p1+1, self.Ne):
                     c1 = eOcc[p1] # orbital of first occupied electron
                     c2 = eOcc[p2] # orbital of second occupied electron
     
@@ -175,7 +175,7 @@ class Hilbert:
                                self.T4[(c2-c1)%self.Nphi, 0]
                                                    
                     # find new pairs
-                    for cx in range(1, self.Nphi):
+                    for cx in np.arange(1, self.Nphi):
                         c1new = (c1+cx)%self.Nphi
                         c2new = (c2-cx)%self.Nphi
                         if c1new >= c2new:
