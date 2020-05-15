@@ -5,7 +5,7 @@ import numba
 import time
 import os
 import pdb
-
+import sys
 
 class Utils:
     
@@ -193,6 +193,11 @@ class Utils:
         hilb = np.zeros((0, Ne), dtype='int8')
         hilbLen = np.zeros(Ne+1, dtype='int64')
         
+        p = int(Ne / np.gcd(Nphi, Ne))
+        q = int(Nphi / np.gcd(Nphi, Ne))
+        
+        fol = fol + 'p{0:d}_q{1:d}/'.format(p, q)
+        
         for s in range(Ne+1):
             try:
                 fil = np.load(fol+'Nphi{0:d}_Ne{1:d}_sector{2:d}.npy'.format(
@@ -203,3 +208,12 @@ class Utils:
                 pass
             
         return hilb, hilbLen
+    
+if __name__ == "__main__":
+    
+    nuinv = int(sys.argv[1])
+    NeMax = int(sys.argv[2])
+    fol = sys.argv[3]
+    
+    Utils.writeHilbert(nuinv, NeMax, fol)
+    

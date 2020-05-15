@@ -25,8 +25,8 @@ T4 = np.real(utils.Utils.make4tensorsym(torus1, pot1))
 t2 = time.time()
 sector = 0
 hilb, hilbLen = utils.Utils.getHilb(Nphi, Ne, sector)
-hilbert0 = hilbert.Hilbert(Nphi, Ne, sector, hilb, hilbLen, T4)
-dij = hilbert0.getMat()
+dictx = hilbert.getDict(hilb)
+dij = hilbert.getMatVec(v, Nphi, Ne, NH, hilb, hilbLen, T4, dictx)
 HMat = scipy.sparse.coo_matrix((dij[0, :], 
                       (dij[1, :], dij[2, :])),
                       shape=(sum(hilbLen), sum(hilbLen)))
