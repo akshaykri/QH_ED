@@ -134,8 +134,11 @@ def getMatVec(v, Nphi, Ne, NH, hilb, hilbLen, T4, dictx):
                                numba.int8[:,:],
                                numba.int64[:],
                                numba.float64[:,:],
-                               numba.types.DictType(numba.int64, numba.int64)))
-def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx):
+                               numba.types.DictType(numba.int64, numba.int64),
+                               numba.int64,
+                               numba.int64),
+            fastmath=True)
+def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i=0, Nth=1):
     """
     Hamiltonian operator for sparse matrix creation in COO format
 
@@ -152,6 +155,8 @@ def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx):
     dictx    : hashmap: keys are decimal representation of electron occupancies,
                         e.g. Ne = [0, 1, 3, 6] = 1 + 2 + 8 + 64 = 75
                         values are array indices of the state in hilb
+    i        : np.int, thread index
+    Nth      : np.int, total number of threads
                         
     outputs:
     --------
@@ -159,12 +164,18 @@ def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx):
                    dij[1, :] contains row indices i
                    dij[2, :] contains col indices j
     """
-
-    Nterms = int(NH * Ne * (Ne - 1) * (Nphi - Ne) / 4)
+    Nterms = int(NH * Ne * (Ne - 1) * (Nphi - Ne) / (4 * Nth))
     dij = np.zeros((3, Nterms))
+
+#     for m in np.arange(100):
+#         dij += 1.0
+#     return dij
+
     cterm = 0
 
-    for cHilb in range(NH):
+    NH_parr = np.arange((i*NH)//Nth, ((i+1)*NH)//Nth)
+    
+    for cHilb in NH_parr:
         eOcc = hilb[cHilb] # occupied electrons
 
         diagel = 0.0
@@ -286,3 +297,43 @@ def getDict(hilb):
 
     return d
 
+
+@numba.njit(numba.float64[:,:,:](numba.int64,
+                                 numba.int64,
+                                 numba.int64,
+                                 numba.int8[:,:],
+                                 numba.int64[:],
+                                 numba.float64[:,:],
+                                 numba.types.DictType(numba.int64, numba.int64),
+                                 numba.int64),
+            parallel=True, fastmath=True)
+def getMatAux(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, Nth=1):
+    """
+    auxiliary function to enable parallelization of the matrix
+    see getMat for documentation
+    """
+    Nterms = int(NH * Ne * (Ne - 1) * (Nphi - Ne) / (4 * Nth))
+    dij = np.zeros((Nth, 3, Nterms))
+    
+    for i in numba.prange(Nth):
+        dij[i, :, :] = getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i, Nth)
+        
+    return dij
+
+
+def dijToCsr(dij, NH):
+    """
+    convert dij to scipy sparse matrix
+    """
+    H = scipy.sparse.coo_matrix((NH, NH))
+    
+    Nth = len(dij)
+    
+    for i in np.arange(Nth):
+        H += scipy.sparse.coo_matrix((dij[i, 0, :], 
+                                     (dij[i, 1, :], dij[i, 2, :])),
+                                     shape=(NH, NH))
+        
+    H = H.tocsr()
+        
+    return H
