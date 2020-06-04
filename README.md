@@ -1,22 +1,8 @@
 # QH_ED
-many-body Quantum Hall code
+This package provides tools for modeling the quantum Hall system via exact diagonalization.
 
-QH_ED1.ipynb:
-  - jupyter notebook with demo of features
+Currently supports the fractional quantum Hall effect with system at various filling fractions, in various Landau levels, and for a variety of interactions.
 
-Python files:
-- hilbert.py:
-  - numba jitted functions for implementing matrix-vector products
-  
-- hilbertnoNumba.py:
-  - same as above, but bare python
+Allows for calculating the low-energy spectrum via sparse matrix diagonalization, and calculation of various correlation functions.
 
-- landau.py:
-  - class Torus contains information about geometry
-  - class Potential contains information about interaction
- 
-- runSim.py:
-  - script to be called by Slurm with various command line parameters
-  
-- utils.py:
-  - various utility functions
+More features to be added.
