@@ -18,7 +18,7 @@ if __name__ == "__main__":
     Ne = int(sys.argv[3])
     fol = sys.argv[4]
     sector = int(sys.argv[5])
-    direct = False
+    direct = True
     
     alp_arr = np.r_[1.0:4.01:0.1] # 31
     asp_arr = np.array([0, 0.25, 0.5]) # 3
@@ -49,8 +49,8 @@ if __name__ == "__main__":
         NH = len(hilb0)
         
         if direct:
-            dij = hilbert.getMatAux(Nphi, Ne, NH, hilb0, hilbLen0, T4, dictx, 8)
-            HMat = hilbert.dijToCsr(dij, NH)
+            dij = hilbert.getMatAux(Nphi, Ne, NH, hilb0, hilbLen0, T4, dictx, 32)
+#             HMat = hilbert.dijToCsr(dij, NH)
         
         
         else:
@@ -60,14 +60,14 @@ if __name__ == "__main__":
         
         t3 = time.time()
         print(t3-t2)
-        E0, V0 = eigsh(HMat, k=6, which='SA')
+#         E0, V0 = eigsh(HMat, k=6, which='SA')
         
-        t2 = time.time()
-        fil = 'Nphi{0:d}_Ne{1:d}_sector{2:d}_alpha{3:d}'.format(
-               Nphi, Ne, sector, int(round(10*alpha)))
+#         t2 = time.time()
+#         fil = 'Nphi{0:d}_Ne{1:d}_sector{2:d}_alpha{3:d}'.format(
+#                Nphi, Ne, sector, int(round(10*alpha)))
 
-        np.save(fol+'LL{0:d}/ar{1:03d}/'.format(
-                LL, int(round(100*ar_factor)))+fil+'_E', E0)
-        np.save(fol+'LL{0:d}/ar{1:03d}/'.format(
-                LL, int(round(100*ar_factor)))+fil+'_V', V0)
+#         np.save(fol+'LL{0:d}/ar{1:03d}/'.format(
+#                 LL, int(round(100*ar_factor)))+fil+'_E', E0)
+#         np.save(fol+'LL{0:d}/ar{1:03d}/'.format(
+#                 LL, int(round(100*ar_factor)))+fil+'_V', V0)
         print(t2-t3)

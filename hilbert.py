@@ -298,7 +298,8 @@ def getDict(hilb):
     return d
 
 
-@numba.njit(numba.float64[:,:,:](numba.int64,
+@numba.njit(#numba.types.ListType(numba.float64[:,:])(numba.int64,
+            numba.float64[:,:,:](numba.int64,
                                  numba.int64,
                                  numba.int64,
                                  numba.int8[:,:],
@@ -314,9 +315,11 @@ def getMatAux(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, Nth=1):
     """
     Nterms = int(NH * Ne * (Ne - 1) * (Nphi - Ne) / (4 * Nth))
     dij = np.zeros((Nth, 3, Nterms))
+#     dij = numba.typed.List()
     
     for i in numba.prange(Nth):
         dij[i, :, :] = getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i, Nth)
+#         dij.append(getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i, Nth))
         
     return dij
 
@@ -333,6 +336,9 @@ def dijToCsr(dij, NH):
         H += scipy.sparse.coo_matrix((dij[i, 0, :], 
                                      (dij[i, 1, :], dij[i, 2, :])),
                                      shape=(NH, NH))
+#         H += scipy.sparse.coo_matrix((dij[i][0, :], 
+#                                      (dij[i][1, :], dij[i][2, :])),
+#                                      shape=(NH, NH))
         
     H = H.tocsr()
         
