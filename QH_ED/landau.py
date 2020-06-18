@@ -52,11 +52,16 @@ class Potential:
     """
     Encapsulates all useful information about a potential.
     """
-    def __init__(self):
+    
+    def __init__(self, torus, hamParams, vParams):
+        self.torus = torus
+        self.hamParams = hamParams
+        self.vParams = vParams
         self.V1 = None
         self.V2 = None # two particle
     
-    def makeFF(self, kx_arr, ky_arr, alpha=1.0, n=0, **kwargs):
+    @staticmethod
+    def makeFF(kx_arr, ky_arr, alpha=1.0, n=0, **kwargs):
         """
         make the single particle form factor
         In the n = 0 LLL,
@@ -86,20 +91,21 @@ class Potential:
         
         return absFF * phaseFF
     
-    def VFourier(self, k, n=1, x=np.inf, l=1000, **kwargs):
+    @staticmethod
+    def vPower(k, n=1, x=np.inf, l=1000):#, **kwargs):
         """
         obtain V(k) for a power-law interaction
 
         inputs:
         -------
-        k     : np.ndarray, absolute value of momentum
+        k     : np.ndarray, absolute value of momentum (2-d array)
         n     : float, power law fall-off
         x     : float, Gaussian envelope length scale
         l     : int, number of divisions in integration quadrature
 
         outputs:
         --------
-        float : V(k) at continuum k 
+        np.ndarray: V(k) at continuum k 
         """
 
         # if only Gaussian
@@ -128,18 +134,19 @@ class Potential:
 
                 return ret
             
-    def Vpseudopot(self, k, Vm=None, **kwargs):
+    @staticmethod
+    def vPseudopot(k, Vm=None):#, **kwargs):
         """
         obtain V(k), given the Haldane pseudopotentials
 
         inputs:
         -------
-        k     : np.ndarray, absolute value of momentum
+        k     : np.ndarray, absolute value of momentum (2-d array)
         Vm    : np.ndarray, Haldane pseudopotentials, default to Coulomb in n=0 LL
 
         outputs:
         --------
-        float : V(k) at continuum k 
+        np.ndarray : V(k) at continuum k 
         """
         
         if Vm is None:
@@ -158,12 +165,89 @@ class Potential:
         Vk[np.abs(k) < 1e-8] = 0
         
         return Vk
-        
+
     
-    def getV2(self, torus, 
-              vParams={'power': {'A': 1.0}, 'haldane': {'A': 1.0}}, 
-              hamParams={},
-              Vk=None):
+    @staticmethod
+    def vDelta(kx, ky, x0=0.0, y0=0.0):#, **kwargs):
+        """
+        obtain V(k), for V(r) = delta(r-r0)
+        useful for computing the pair correlation function
+
+        inputs:
+        -------
+        kx, ky: np.array, x and y components of momentum
+        x0, y0: coordinates of position r0
+        
+        outputs:
+        --------
+        np.ndarray : V(kx, ky) at continuum k 
+        """
+        
+        Vk = np.outer(np.exp(1j*kx*x0), np.exp(1j*ky*y0))
+        
+        return Vk
+    
+    @staticmethod
+    def getVk(kx, ky, 
+              vParams={'power': (1.0, {})}):
+        """
+        get the k-space potential
+        
+        inputs:
+        -------
+        kx, ky : np.array, x and y components of momentum
+        vParams: dict with the following keys
+                 'power' 
+                 'haldane'
+                 'delta'
+                 the values are tuples (amplitude, dict), where the dict
+                 specifies parameters of the interaction
+        
+        outputs:
+        --------
+        float : V(kx, ky) at continuum k 
+        """
+        
+        k_abs = np.sqrt(kx[:, np.newaxis]**2 + ky**2)
+        Vk = np.zeros((len(kx), len(ky)))
+        
+        if 'power' in vParams:
+            Vk += vParams['power'][0] * Potential.vPower(k_abs, **vParams['power'][1])
+        if 'haldane' in vParams:
+            Vk += vParams['haldane'][0] * Potential.vPseudopot(k_abs, **vParams['haldane'][1])
+        if 'delta' in vParams:
+            Vk += vParams['delta'][0] * Potential.vDelta(kx, ky, **vParams['delta'][1])
+        
+        return Vk
+    
+    @staticmethod
+    def applyFF(kx, ky, Vk, hamParams):
+        """
+        return the V(k) with form factor
+        
+        inputs:
+        -------
+        kx, ky  : np.array, x and y components of momentum
+        Vk      : dict with the following keys
+                   'power' 
+                   'haldane'
+                   'delta'
+                   the values are tuples (amplitude, dict), where the dict
+                   specifies parameters of the interaction
+        hamParams: dict with keys 'Nphi', 'alpha', 'n'
+        
+        outputs:
+        --------
+        np.ndarray : V(kx, ky) at continuum k WITH form factor
+        """
+        
+        FF = Potential.makeFF(kx, ky, **hamParams)
+        return Vk * FF * FF / (2 * np.pi * hamParams['Nphi'])
+        
+    @staticmethod
+    def getV2(torus, 
+              vParams={}, 
+              hamParams={}):
         """
         return a two dimensional np.array, with the 
         effective potential at q = (k_x, k_y),
@@ -184,17 +268,14 @@ class Potential:
         """
         
         kx, ky, _ = torus.get_karr()
-        k_abs = np.sqrt(kx[:, np.newaxis]**2 + ky**2)
-#         pdb.set_trace()
-        if Vk is None:
-            Vk = vParams['power']['A'] * self.VFourier(k_abs, **vParams['power'])
-            Vk += vParams['haldane']['A'] * self.Vpseudopot(k_abs, **vParams['haldane'])
-        FF = self.makeFF(kx, ky, **hamParams)
+        VkFF = Potential.applyFF(kx, ky, 
+                                 Potential.getVk(kx, ky, vParams), 
+                                 hamParams)
         
-        return Vk * FF * FF / (2 * np.pi * hamParams['Nphi'])
+        return VkFF
     
-    def setV2(self, **kwargs):
+    def setV2(self):
         """
         set the V2 attribute (interaction)
         """
-        self.V2 = self.getV2(**kwargs)
+        self.V2 = self.getV2(self.torus, self.vParams, self.hamParams)

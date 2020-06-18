@@ -195,10 +195,6 @@ def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i=0, Nth=1):
     Nterms = int(NH * Ne * (Ne - 1) * (Nphi - Ne) / (4 * Nth))
     dij = np.zeros((3, Nterms))
 
-#     for m in np.arange(100):
-#         dij += 1.0
-#     return dij
-
     cterm = 0
 
     NH_parr = np.arange((i*NH)//Nth, ((i+1)*NH)//Nth)
@@ -218,11 +214,6 @@ def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i=0, Nth=1):
                 diagel += -T4[(c1-c2)%Nphi, (c1-c2)%Nphi] + \
                            T4[(c2-c1)%Nphi, 0]
                 
-#                 diagel += -self.T4[(c1-c2)%self.Nphi, (c1-c2)%self.Nphi] + \
-#                               -self.T4[(c2-c1)%self.Nphi, (c2-c1)%self.Nphi] + \
-#                                self.T4[(c1-c2)%self.Nphi, 0] + \
-#                                self.T4[(c2-c1)%self.Nphi, 0]
-
                 # find new pairs
                 for cx in np.arange(1, Nphi):
                     c1new = (c1+cx)%Nphi
@@ -249,7 +240,6 @@ def getMat(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i=0, Nth=1):
                         # and that they are both not in eOcc
 
                         # populate eOccNew
-#                             eOccNew = np.zeros(self.Ne, dtype='int8') # array of length Ne
                         eOccNew = np.zeros(Ne, dtype=numba.int64) # array of length Ne
                         cNeOld = 0
                         state = 0
@@ -440,7 +430,6 @@ def getMatC(Nphi, Ne, NH, hilb, hilbLen, T4, dictx, i=0, Nth=1):
                         # and that they are both not in eOcc
 
                         # populate eOccNew
-#                             eOccNew = np.zeros(self.Ne, dtype='int8') # array of length Ne
                         eOccNew = np.zeros(Ne, dtype=numba.int64) # array of length Ne
                         cNeOld = 0
                         state = 0
