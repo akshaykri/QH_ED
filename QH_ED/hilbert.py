@@ -6,6 +6,16 @@ import time
 import os
 import pdb
 
+class Hilbert:
+    
+    def __init__(self, Nphi, Ne, NH, hilb, hilbLen, dictx):
+        self.Nphi = Nphi
+        self.Ne = Ne
+        self.NH = NH
+        self.hilb = hilb
+        self.hilbLen = hilbLen
+        self.dictx = dictx
+        
 @numba.njit(numba.types.DictType(numba.int64, numba.int64)
             (numba.int8[:,:]))
 def getDict(hilb):

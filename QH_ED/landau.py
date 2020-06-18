@@ -92,7 +92,7 @@ class Potential:
         return absFF * phaseFF
     
     @staticmethod
-    def vPower(k, n=1, x=np.inf, l=1000):#, **kwargs):
+    def vPower(k, n=1, x=np.inf, l=1000):
         """
         obtain V(k) for a power-law interaction
 
@@ -135,7 +135,7 @@ class Potential:
                 return ret
             
     @staticmethod
-    def vPseudopot(k, Vm=None):#, **kwargs):
+    def vPseudopot(k, Vm=None):
         """
         obtain V(k), given the Haldane pseudopotentials
 
@@ -168,7 +168,7 @@ class Potential:
 
     
     @staticmethod
-    def vDelta(kx, ky, x0=0.0, y0=0.0):#, **kwargs):
+    def vDelta(kx, ky, x0=0.0, y0=0.0):
         """
         obtain V(k), for V(r) = delta(r-r0)
         useful for computing the pair correlation function
@@ -209,7 +209,7 @@ class Potential:
         """
         
         k_abs = np.sqrt(kx[:, np.newaxis]**2 + ky**2)
-        Vk = np.zeros((len(kx), len(ky)))
+        Vk = np.zeros((len(kx), len(ky)), dtype='complex128')
         
         if 'power' in vParams:
             Vk += vParams['power'][0] * Potential.vPower(k_abs, **vParams['power'][1])
