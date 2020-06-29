@@ -54,6 +54,11 @@ class Potential:
     """
     
     def __init__(self, torus, hamParams, vParams):
+        """
+        torus     : instance of Torus class
+        hamParams : dict with keys 'alpha', 'Nphi', and 'n'
+        vParams   : dict with optional keys 'power', 'haldane' etc.  
+        """
         self.torus = torus
         self.hamParams = hamParams
         self.vParams = vParams
@@ -110,7 +115,7 @@ class Potential:
 
         # if only Gaussian
         if n == 0:
-            Vk = 2 * np.pi * x**2 * np.exp(-x**2 * k**2)
+            Vk = 2 * np.pi * x**2 * np.exp(-x**2 * k**2 / 2)
             Vk[np.abs(k) < 1e-8] = 0
             return Vk
         else:
