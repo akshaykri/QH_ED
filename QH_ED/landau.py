@@ -155,16 +155,21 @@ class Potential:
         """
         
         if Vm is None:
-            Vm = np.zeros(20)
-            for m in np.arange(20):
+            print("Warning! No pseudopotentials provided\n"+
+                  +"Defaulting to crude Coulomb aproximation.")
+            Vm = np.zeros(10000)
+            for m in np.arange(40):
                 ## see Yoshioka (4.39)
-                Vm[m] = np.sqrt(np.pi)/2 * scipy.special.factorial(2*m) / (
-                    2**(2*m) * scipy.special.factorial(m)**2)
+                if m < 500:
+                    Vm[m] = np.sqrt(np.pi)/2 * scipy.special.comb(2*m, m) / (2.**(2*m))
+                else:
+                    Vm[m] = 0.5 * (1 - 0.125/m) / np.sqrt(m)
                 
         Vk = np.zeros_like(k)
-        ## see Yoshioka, (4.38)
+        ## see Yoshioka, (4.38): this is off by a factor of 2 pi,
+        ## ref. Macdonald arXiv:condmat.9410047, eq (59)
         for m in np.arange(len(Vm)):
-            Vk += 2 * Vm[m] * scipy.special.eval_laguerre(m, k**2)
+            Vk += 4 * np.pi * Vm[m] * scipy.special.eval_laguerre(m, k**2)
         
         
         Vk[np.abs(k) < 1e-8] = 0
