@@ -140,7 +140,7 @@ class Potential:
                 return ret
             
     @staticmethod
-    def vPseudopot(k, Vm=None):
+    def vPseudopot(k, n=0, Vm=None):
         """
         obtain V(k), given the Haldane pseudopotentials
 
@@ -173,8 +173,7 @@ class Potential:
         
         
         Vk[np.abs(k) < 1e-8] = 0
-        
-        return Vk
+        return Vk / (scipy.special.eval_laguerre(n, k**2/2))**2
 
     
     @staticmethod
@@ -199,7 +198,8 @@ class Potential:
     
     @staticmethod
     def getVk(kx, ky, 
-              vParams={'power': (1.0, {})}):
+              vParams={'power': (1.0, {})},
+              hamParams={'n': 0}):
         """
         get the k-space potential
         
@@ -212,6 +212,7 @@ class Potential:
                  'delta'
                  the values are tuples (amplitude, dict), where the dict
                  specifies parameters of the interaction
+        hamParams: 
         
         outputs:
         --------
@@ -224,7 +225,8 @@ class Potential:
         if 'power' in vParams:
             Vk += vParams['power'][0] * Potential.vPower(k_abs, **vParams['power'][1])
         if 'haldane' in vParams:
-            Vk += vParams['haldane'][0] * Potential.vPseudopot(k_abs, **vParams['haldane'][1])
+            Vk += vParams['haldane'][0] * Potential.vPseudopot(k_abs, hamParams['n'],
+                                                               **vParams['haldane'][1])
         if 'delta' in vParams:
             Vk += vParams['delta'][0] * Potential.vDelta(kx, ky, **vParams['delta'][1])
         
@@ -279,7 +281,7 @@ class Potential:
         
         kx, ky, _ = torus.get_karr()
         VkFF = Potential.applyFF(kx, ky, 
-                                 Potential.getVk(kx, ky, vParams), 
+                                 Potential.getVk(kx, ky, vParams, hamParams), 
                                  hamParams)
         
         return VkFF
